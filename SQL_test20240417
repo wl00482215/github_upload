@@ -1,0 +1,47 @@
+WITH AA_SEQ AS (
+    SELECT 12345600 AS NUM
+	UNION ALL
+    SELECT NUM + 1 AS NUM 
+	FROM AA_SEQ WHERE NUM < 12345649
+),
+AB_SEQ AS (
+    SELECT 98765400 AS NUM
+	UNION ALL
+    SELECT NUM + 1 AS AB_NUM 
+	FROM AB_SEQ WHERE NUM < 98765449
+),
+AC_SEQ AS (
+    SELECT 45678900 AS NUM
+	UNION ALL
+    SELECT NUM + 1 AS AB_NUM 
+	FROM AC_SEQ WHERE NUM < 45678988
+)
+SELECT 
+ROW_NUMBER() over(order by invoice_book.updated_at,invoice_all.NUM) as id
+,invoice_all.track+'-'+invoice_all.NUM as invoice_number
+,invoice_all.track
+,invoice_book.year
+,invoice_book.month
+,invoice_book.begin_number
+,invoice_book.end_number
+FROM (
+	SELECT 'AA' as track, convert(nvarchar(8),NUM) as NUM FROM AA_SEQ
+	union
+	SELECT 'AB' as track, convert(nvarchar(8),NUM) as NUM FROM AB_SEQ
+	union
+	SELECT 'AC' as track, convert(nvarchar(8),NUM) as NUM FROM AC_SEQ
+) AS invoice_all
+LEFT JOIN (
+	SELECT track,year,month,begin_number,end_number,updated_at
+	FROM invoice_book
+) AS invoice_book
+ON invoice_all.track=invoice_book.track
+LEFT JOIN (
+	select id,invoice_number,
+	SUBSTRING(invoice_number,1,2) as track,
+	SUBSTRING(invoice_number,4,8) as NUM
+	from invoice 
+	where invoice_date>='2024-03-01' and invoice_date<='2024-03-31'
+) as invoice
+on invoice_all.track=invoice.track and invoice_all.NUM=invoice.NUM
+where invoice.NUM is null
